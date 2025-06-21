@@ -8,7 +8,7 @@ import zipfile
 import tempfile
 import shutil
 
-GITHUB_REPO = "example_owner/example_repo"
+GITHUB_REPO = "samebr0dy/EPTAClient"
 
 # Location of the configuration file inside AppData (Windows) or ~/.config (Linux/Mac)
 if os.name == "nt":
