@@ -4,7 +4,7 @@ This project provides a minimal launcher for Minecraft written in Python. It can
 
 ## Features
 - Checks a GitHub repository for the most recent release.
-- Downloads the release as a zip archive and extracts it into an `EPTA Client` folder.
+- Downloads the release's `zipball_url` as a zip archive and extracts it into an `EPTA Client` folder.
 - Supports launching the game with an offline username.
 - Basic Tkinter interface to update and launch the game.
 - Lets you choose where the game files are installed.
@@ -21,7 +21,7 @@ This project provides a minimal launcher for Minecraft written in Python. It can
    python launcher.py
    ```
 4. Enter a username and select a folder where the game should be installed.
-   Press **Check for Update** to download the latest release zip and extract it.
+   Press **Check for Update** to download the release via `zipball_url` and extract it.
    Afterwards press **Launch** to start the game.
 
 ## Microsoft Login
