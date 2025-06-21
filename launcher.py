@@ -4,28 +4,47 @@ import requests
 import os
 import subprocess
 import json
+import zipfile
 
 GITHUB_REPO = "example_owner/example_repo"
-DEFAULT_GAME_DIR = "game"
-CONFIG_FILE = "config.json"
-GAME_DIR = DEFAULT_GAME_DIR
+
+# Location of the configuration file inside AppData (Windows) or ~/.config (Linux/Mac)
+if os.name == "nt":
+    APPDATA_DIR = os.getenv("APPDATA", os.path.expanduser("~"))
+else:
+    APPDATA_DIR = os.path.join(os.path.expanduser("~"), ".config")
+
+CONFIG_DIR = os.path.join(APPDATA_DIR, "EPTAData")
+CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
+
+DEFAULT_GAME_DIR_NAME = "EPTA Client"
+GAME_DIR = os.path.join(os.getcwd(), DEFAULT_GAME_DIR_NAME)
+
+USERNAME = ""
+LAST_VERSION = None
 
 
 def load_config():
-    global GAME_DIR
+    """Load launcher configuration from CONFIG_FILE."""
+    global GAME_DIR, USERNAME, LAST_VERSION
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                GAME_DIR = data.get("game_dir", DEFAULT_GAME_DIR)
+                GAME_DIR = data.get("game_dir", GAME_DIR)
+                USERNAME = data.get("username", "")
+                LAST_VERSION = data.get("last_version")
         except json.JSONDecodeError:
-            GAME_DIR = DEFAULT_GAME_DIR
+            pass
 
 
-def save_config(game_dir):
+def save_config(game_dir, username, version):
+    """Save launcher configuration to CONFIG_FILE."""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump({"game_dir": game_dir}, f)
-RELEASE_ASSET_NAME = "game.jar"
+        json.dump({"game_dir": game_dir, "username": username, "last_version": version}, f)
+
+RELEASE_ASSET_NAME = "game.zip"
 
 
 def get_latest_release_info():
@@ -46,46 +65,46 @@ def download_asset(asset_url, dest_path):
     return False
 
 
-def version_file():
-    return os.path.join(GAME_DIR, "version.txt")
-
-
-def read_local_version():
-    vf = version_file()
-    if os.path.exists(vf):
-        with open(vf, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    return None
-
-
-def write_local_version(version):
-    os.makedirs(GAME_DIR, exist_ok=True)
-    vf = version_file()
-    with open(vf, "w", encoding="utf-8") as f:
-        f.write(version)
-
-
 def check_for_update():
+    """Check GitHub for a new release and install it if available."""
+    global LAST_VERSION
     info = get_latest_release_info()
     if not info:
         return False, "Failed to fetch release info"
-    latest_version = info.get("tag_name")
-    local_version = read_local_version()
-    if latest_version != local_version:
-        asset = next((a for a in info.get("assets", []) if a.get("name") == RELEASE_ASSET_NAME), None)
+
+    latest_version = info.get("tag_name") or info.get("name")
+    if latest_version != LAST_VERSION:
+        asset = next(
+            (a for a in info.get("assets", []) if a.get("name", "").endswith(".zip")),
+            None,
+        )
         if not asset:
             return False, "Release asset not found"
+
         os.makedirs(GAME_DIR, exist_ok=True)
-        asset_path = os.path.join(GAME_DIR, RELEASE_ASSET_NAME)
+        asset_path = os.path.join(GAME_DIR, asset.get("name"))
         if download_asset(asset.get("browser_download_url"), asset_path):
-            write_local_version(latest_version)
+            try:
+                with zipfile.ZipFile(asset_path, "r") as zip_ref:
+                    zip_ref.extractall(GAME_DIR)
+            except zipfile.BadZipFile:
+                return False, "Downloaded file is not a valid zip archive"
+            os.remove(asset_path)
+            LAST_VERSION = latest_version
+            save_config(GAME_DIR, USERNAME, LAST_VERSION)
             return True, f"Updated to {latest_version}"
         return False, "Failed to download asset"
     return False, "Already up to date"
 
 
 def launch_game(username):
-    jar_path = os.path.join(GAME_DIR, RELEASE_ASSET_NAME)
+    """Launch the game using the installed JDK."""
+    jar_path = os.path.join(
+        GAME_DIR,
+        "versions",
+        "Forge 1.20.1",
+        "Forge 1.20.1.jar",
+    )
     if not os.path.exists(jar_path):
         messagebox.showerror("Error", "Game not found. Update first.")
         return
@@ -101,6 +120,7 @@ class LauncherWindow(tk.Tk):
 
         tk.Label(self, text="Username:").pack(pady=5)
         self.username_entry = tk.Entry(self)
+        self.username_entry.insert(0, USERNAME)
         self.username_entry.pack(pady=5)
 
         tk.Label(self, text="Game Directory:").pack(pady=5)
@@ -122,9 +142,10 @@ class LauncherWindow(tk.Tk):
             self.game_dir_var.set(path)
 
     def update_game(self):
-        global GAME_DIR
-        GAME_DIR = self.game_dir_var.get().strip() or DEFAULT_GAME_DIR
-        save_config(GAME_DIR)
+        global GAME_DIR, USERNAME
+        GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
+        USERNAME = self.username_entry.get().strip()
+        save_config(GAME_DIR, USERNAME, LAST_VERSION)
         updated, message = check_for_update()
         messagebox.showinfo("Update", message)
 
@@ -133,9 +154,10 @@ class LauncherWindow(tk.Tk):
         if not username:
             messagebox.showerror("Error", "Username required")
             return
-        global GAME_DIR
-        GAME_DIR = self.game_dir_var.get().strip() or DEFAULT_GAME_DIR
-        save_config(GAME_DIR)
+        global GAME_DIR, USERNAME
+        GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
+        USERNAME = username
+        save_config(GAME_DIR, USERNAME, LAST_VERSION)
         launch_game(username)
 
 
