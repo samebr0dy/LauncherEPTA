@@ -123,7 +123,17 @@ def launch_game(username):
     if not os.path.exists(jar_path):
         messagebox.showerror("Error", "Game not found. Update first.")
         return
-    cmd = ["java", "-jar", jar_path, "--username", username]
+    # Use the jar on the classpath so that Minecraft's main class can be found
+    # even if the jar isn't marked as executable. Forge-based packs often rely
+    # on additional libraries rather than a fat jar.
+    cmd = [
+        "java",
+        "-cp",
+        jar_path,
+        "net.minecraft.client.Main",
+        "--username",
+        username,
+    ]
     subprocess.Popen(cmd)
 
 
