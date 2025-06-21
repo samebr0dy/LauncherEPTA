@@ -5,6 +5,8 @@ import os
 import subprocess
 import json
 import zipfile
+import tempfile
+import shutil
 
 GITHUB_REPO = "example_owner/example_repo"
 
@@ -44,9 +46,6 @@ def save_config(game_dir, username, version):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump({"game_dir": game_dir, "username": username, "last_version": version}, f)
 
-RELEASE_ASSET_NAME = "game.zip"
-
-
 def get_latest_release_info():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     response = requests.get(url, timeout=10)
@@ -74,26 +73,42 @@ def check_for_update():
 
     latest_version = info.get("tag_name") or info.get("name")
     if latest_version != LAST_VERSION:
-        asset = next(
-            (a for a in info.get("assets", []) if a.get("name", "").endswith(".zip")),
-            None,
-        )
-        if not asset:
-            return False, "Release asset not found"
+        zip_url = info.get("zipball_url")
+        if not zip_url:
+            return False, "zipball_url not found"
 
         os.makedirs(GAME_DIR, exist_ok=True)
-        asset_path = os.path.join(GAME_DIR, asset.get("name"))
-        if download_asset(asset.get("browser_download_url"), asset_path):
+        zip_path = os.path.join(GAME_DIR, f"{latest_version}.zip")
+        if download_asset(zip_url, zip_path):
             try:
-                with zipfile.ZipFile(asset_path, "r") as zip_ref:
-                    zip_ref.extractall(GAME_DIR)
+                tmp_dir = tempfile.mkdtemp()
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(tmp_dir)
+                root_items = os.listdir(tmp_dir)
+                if len(root_items) == 1 and os.path.isdir(os.path.join(tmp_dir, root_items[0])):
+                    src_root = os.path.join(tmp_dir, root_items[0])
+                else:
+                    src_root = tmp_dir
+                for item in os.listdir(src_root):
+                    src = os.path.join(src_root, item)
+                    dst = os.path.join(GAME_DIR, item)
+                    if os.path.isdir(src):
+                        if os.path.exists(dst):
+                            shutil.rmtree(dst)
+                        shutil.move(src, dst)
+                    else:
+                        if os.path.exists(dst):
+                            os.remove(dst)
+                        shutil.move(src, dst)
+                shutil.rmtree(tmp_dir)
             except zipfile.BadZipFile:
+                os.remove(zip_path)
                 return False, "Downloaded file is not a valid zip archive"
-            os.remove(asset_path)
+            os.remove(zip_path)
             LAST_VERSION = latest_version
             save_config(GAME_DIR, USERNAME, LAST_VERSION)
             return True, f"Updated to {latest_version}"
-        return False, "Failed to download asset"
+        return False, "Failed to download release"
     return False, "Already up to date"
 
 
