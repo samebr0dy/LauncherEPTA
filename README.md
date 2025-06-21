@@ -7,6 +7,7 @@ This project provides a minimal launcher for Minecraft written in Python. It can
 - Downloads the specified release asset when an update is found.
 - Supports launching the game with an offline username.
 - Basic Tkinter interface to update and launch the game.
+- Lets you choose where the game files are installed.
 
 ## Usage
 1. Install the dependencies:
@@ -18,7 +19,8 @@ This project provides a minimal launcher for Minecraft written in Python. It can
    ```bash
    python launcher.py
    ```
-4. Enter a username, press **Check for Update** to download the latest release, then press **Launch**.
+4. Enter a username and select a game directory if the game is not installed.
+   Press **Check for Update** to download the latest release, then press **Launch**.
 
 ## Microsoft Login
 The launcher contains only offline launching capabilities. Implementing Microsoft (Mojang) authentication requires access to Microsoft's login services, which may not be reachable in this environment.
