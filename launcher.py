@@ -30,6 +30,17 @@ GAME_DIR = os.path.join(os.getcwd(), DEFAULT_GAME_DIR_NAME)
 
 USERNAME = ""
 LAST_VERSION = None
+# Colors for the launcher buttons. Adjusted to blend with the dark background
+BUTTON_BG = "#253025"
+BUTTON_ACTIVE_BG = "#2c3a2c"
+BUTTON_FG = "white"
+BUTTON_KWARGS = {
+    "bg": BUTTON_BG,
+    "fg": BUTTON_FG,
+    "activebackground": BUTTON_ACTIVE_BG,
+    "relief": "flat",
+    "highlightthickness": 0,
+}
 # Default template for launching the game. ``{jar_path}`` and ``{username}``
 # will be replaced at runtime. You can customize this template in the
 # configuration file.
@@ -211,6 +222,8 @@ class LauncherWindow(tk.Tk):
         super().__init__()
         self.title("EPTA Launcher")
         self.geometry("400x300")
+        # Prevent the window from being resized
+        self.resizable(False, False)
 
         bg_path = os.path.join(os.path.dirname(__file__), "background.png")
         if os.path.exists(bg_path):
@@ -228,17 +241,17 @@ class LauncherWindow(tk.Tk):
         self.game_dir_var = tk.StringVar(value=GAME_DIR)
         dir_frame = tk.Frame(self)
         tk.Entry(dir_frame, textvariable=self.game_dir_var, width=30).pack(side=tk.LEFT, padx=(0, 5))
-        tk.Button(dir_frame, text="Browse", command=self.browse_dir).pack(side=tk.LEFT)
+        tk.Button(dir_frame, text="Browse", command=self.browse_dir, **BUTTON_KWARGS).pack(side=tk.LEFT)
         dir_frame.pack(pady=5)
 
         tk.Label(self, text="Дополнительные параметры запуска:").pack(pady=5)
         self.launch_cmd_var = tk.StringVar(value=EXTRA_ARGS)
         tk.Entry(self, textvariable=self.launch_cmd_var, width=50).pack(pady=5)
 
-        update_btn = tk.Button(self, text="Проверить обновления", command=self.update_game)
+        update_btn = tk.Button(self, text="Проверить обновления", command=self.update_game, **BUTTON_KWARGS)
         update_btn.pack(pady=5)
 
-        launch_btn = tk.Button(self, text="ЗАПУСТИТЬ", command=self.launch)
+        launch_btn = tk.Button(self, text="ЗАПУСТИТЬ", command=self.launch, **BUTTON_KWARGS)
         launch_btn.pack(pady=5)
 
         # Progress bar and label for update process
