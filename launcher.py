@@ -7,7 +7,13 @@ import threading
 import subprocess
 import requests
 
+import warnings
 from PyQt5 import QtWidgets, QtGui, QtCore
+
+# Suppress deprecated SIP warnings from PyQt on Python 3.12+
+warnings.filterwarnings(
+    "ignore", message="sipPyTypeDict() is deprecated", category=DeprecationWarning
+)
 
 
 GITHUB_REPO = "samebr0dy/EPTAClient"
@@ -205,8 +211,11 @@ class LauncherWindow(QtWidgets.QWidget):
 
         bg_path = os.path.join(os.path.dirname(__file__), "background.png")
         if os.path.exists(bg_path):
-            qpath = QtCore.QUrl.fromLocalFile(bg_path).path
-            self.setStyleSheet(f"QWidget {{ background-image: url({qpath}); }}")
+            # Use a file URL and quote it to avoid stylesheet parse errors
+            qpath = QtCore.QUrl.fromLocalFile(bg_path).toString()
+            self.setStyleSheet(
+                f"QWidget {{ background-image: url('{qpath}'); }}"
+            )
 
         layout = QtWidgets.QVBoxLayout(self)
 
