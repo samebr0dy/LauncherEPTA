@@ -36,3 +36,22 @@ This project provides a minimal launcher for Minecraft written in Python. It can
 
 ## Microsoft Login
 The launcher contains only offline launching capabilities. Implementing Microsoft (Mojang) authentication requires access to Microsoft's login services, which may not be reachable in this environment.
+
+## Building an executable
+
+To distribute the launcher as a standalone Windows application, you can build an
+`.exe` using [PyInstaller](https://pyinstaller.org/):
+
+1. Install the dependencies and PyInstaller:
+   ```bash
+   pip install -r requirements.txt
+   pip install pyinstaller
+   ```
+2. Run PyInstaller from the project directory:
+   ```bash
+   pyinstaller --onefile --add-data background.png;. launcher.py
+   ```
+   On Linux or macOS replace the semicolon (`;`) after the image name with a
+   colon (`:`).
+3. The compiled launcher will be located in the `dist` folder as
+   `launcher.exe` (or just `launcher` on non‑Windows platforms).
