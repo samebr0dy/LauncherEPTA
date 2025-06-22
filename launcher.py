@@ -221,7 +221,7 @@ def launch_game():
     """Launch the game using DEFAULT_CMD_TEMPLATE and EXTRA_ARGS."""
     jar_path = os.path.join(GAME_DIR, "versions", "Forge-1.20.1", "Forge-1.20.1.jar")
     if not os.path.exists(jar_path):
-        QtWidgets.QMessageBox.critical(None, "Error", "Игра не найдена, сначала обновитесь")
+        QtWidgets.QMessageBox.critical(None, "Ошибка", "Игра не найдена, сначала обновитесь")
         return
     if not check_java():
         return
@@ -298,7 +298,7 @@ class LauncherWindow(QtWidgets.QWidget):
         dir_layout = QtWidgets.QHBoxLayout()
         self.game_dir_var = QtWidgets.QLineEdit(GAME_DIR)
         dir_layout.addWidget(self.game_dir_var)
-        browse_btn = QtWidgets.QPushButton("Browse")
+        browse_btn = QtWidgets.QPushButton("ОБЗОР")
         browse_btn.clicked.connect(self.browse_dir)
         dir_layout.addWidget(browse_btn)
         dir_group.addLayout(dir_layout)
@@ -376,7 +376,7 @@ class LauncherWindow(QtWidgets.QWidget):
         QtCore.QTimer.singleShot(0, _update)
 
     def browse_dir(self):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Directory", self.game_dir_var.text())
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Выберите директорию для игры", self.game_dir_var.text())
         if path:
             self.game_dir_var.setText(path)
 
@@ -400,12 +400,12 @@ class LauncherWindow(QtWidgets.QWidget):
     @QtCore.pyqtSlot(str)
     def _show_update_result(self, message: str):
         self.set_progress("", 0)
-        QtWidgets.QMessageBox.information(self, "Update", message)
+        QtWidgets.QMessageBox.information(self, "Обновление", message)
 
     def launch(self):
         username = self.username_entry.text().strip()
         if not username:
-            QtWidgets.QMessageBox.critical(self, "Error", "Требуется никнейм")
+            QtWidgets.QMessageBox.critical(self, "Ошибка", "Требуется никнейм")
             return
         global GAME_DIR, USERNAME, EXTRA_ARGS
         GAME_DIR = self.game_dir_var.text().strip() or GAME_DIR
