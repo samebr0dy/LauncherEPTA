@@ -51,7 +51,7 @@ GAME_DIR = os.path.join(os.getcwd(), DEFAULT_GAME_DIR_NAME)
 
 USERNAME = ""
 LAST_VERSION = None
-EXTRA_ARGS = r"-Xms3031M -Xmx8G"
+EXTRA_ARGS = r"-Xms3031M -Xmx8192M"
 
 # Placeholder for JVM arguments. In the original project this string contained
 # many tuning options. Keeping it short here avoids huge source lines while still
@@ -279,6 +279,7 @@ class LauncherWindow(QtWidgets.QWidget):
                 "background-position: center; "
                 "background-repeat: no-repeat; "
                 "}"
+                " QToolTip { color: black; }"
             )
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -311,9 +312,12 @@ class LauncherWindow(QtWidgets.QWidget):
         info_label = QtWidgets.QLabel("?")
         info_label.setAlignment(QtCore.Qt.AlignCenter)
         info_label.setFixedWidth(15)
+        info_label.setStyleSheet("color: grey;" "background-color: rgba(0,0,0,255); ")
         info_text = (
-            "Аргументы командной строки, которые будут переданы Java при запуске. "
-            "Например: -Xmx4G -Xms2G"
+            "Аргументы командной строки, которые будут переданы Java при запуске.\n"
+            "-Xms*M – ставит минимальное кол-во оперативной памяти в МБ для игры.\n"
+            "-Xmx*M – ставит максимальное кол-во оперативной памяти в МБ для игры.\n"
+            "Вы можете написать кол-во оперативки в ГБ, просто замените M на G!"
         )
         info_label.setToolTip(info_text)
         args_label_layout.addWidget(args_label)
