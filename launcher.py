@@ -5,6 +5,7 @@ import tempfile
 import shutil
 import threading
 import subprocess
+import re
 import sys
 import requests
 
@@ -67,6 +68,35 @@ def write_args_file(game_dir: str) -> str:
     tmp.write(args)
     tmp.close()
     return tmp.name
+
+
+def check_java(min_version: int = 17) -> bool:
+    """Return True if Java of at least min_version is available."""
+    java_cmd = DEFAULT_CMD_TEMPLATE.split()[0]
+    try:
+        result = subprocess.run(
+            [java_cmd, "-version"], capture_output=True, text=True, check=False
+        )
+    except FileNotFoundError:
+        result_output = ""
+    else:
+        result_output = (result.stdout or "") + (result.stderr or "")
+    match = re.search(r'version "?(\d+)', result_output)
+    if match and int(match.group(1)) >= min_version:
+        return True
+    reply = QtWidgets.QMessageBox.question(
+        None,
+        "Java",
+        f"Java {min_version}+ не найдена. Открыть страницу скачивания JDK?",
+        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+    )
+    if reply == QtWidgets.QMessageBox.Yes:
+        QtGui.QDesktopServices.openUrl(
+            QtCore.QUrl(
+                "https://adoptium.net/temurin/releases/?version=" + str(min_version)
+            )
+        )
+    return False
 
 
 def load_config():
@@ -193,6 +223,8 @@ def launch_game():
     if not os.path.exists(jar_path):
         QtWidgets.QMessageBox.critical(None, "Error", "Игра не найдена, сначала обновитесь")
         return
+    if not check_java():
+        return
     args_file = write_args_file(GAME_DIR)
     base_cmd = DEFAULT_CMD_TEMPLATE.format(ARGS_FILE=args_file)
     cmd_string = f"{base_cmd} {EXTRA_ARGS} --username {USERNAME}".strip()
@@ -225,6 +257,11 @@ class LauncherWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("EPTA Launcher")
+        ico_path = resource_path("epta_icon_64x64.ico")
+        if os.path.exists(ico_path):
+            # Qt stylesheets choke on backslashes; use forward slashes
+            qpathico = os.path.abspath(ico_path).replace("\\", "/")
+            self.setWindowIcon(QtGui.QIcon(qpathico))
         self.setFixedSize(400, 300)
 
         # Give the widget an object name so we can target it in the stylesheet

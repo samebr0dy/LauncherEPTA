@@ -29,10 +29,12 @@ This project provides a minimal launcher for Minecraft written in Python. It can
    Afterwards press **Launch** to start the game.
    You can customise the Java command used to start the game by editing
    `config.json` inside `AppData/EPTAData` (or `~/.config/EPTAData`) and
-    changing the `base_cmd_template` value. Arguments typed in the **Additional
-    Launch Arguments** field will be appended to this command when launching.
-    The launcher writes all JVM options to a temporary `args.txt` file before
-    starting Java so the command line stays short on Windows.
+   changing the `base_cmd_template` value. Arguments typed in the **Additional
+   Launch Arguments** field will be appended to this command when launching.
+   The launcher writes all JVM options to a temporary `args.txt` file before
+   starting Java so the command line stays short on Windows.
+   The launcher will check for Java 17+ when launching the game and offer to open a JDK download page if it is missing or outdated.
+
 
 ## Microsoft Login
 The launcher contains only offline launching capabilities. Implementing Microsoft (Mojang) authentication requires access to Microsoft's login services, which may not be reachable in this environment.
@@ -49,7 +51,7 @@ To distribute the launcher as a standalone Windows application, you can build an
    ```
 2. Run PyInstaller from the project directory:
    ```bash
-   pyinstaller --onefile --add-data background.png:. launcher.py
+   pyinstaller --onefile --add-data background.png;. --icon=epta_icon_64x64.ico launcher.py
    ```
    On Linux or macOS replace the semicolon (`;`) after the image name with a
    colon (`:`).
