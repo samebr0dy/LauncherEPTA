@@ -46,7 +46,7 @@ else:
 CONFIG_DIR = os.path.join(APPDATA_DIR, "EPTAData")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
-DEFAULT_GAME_DIR_NAME = "EPTA Client"
+DEFAULT_GAME_DIR_NAME = ""
 GAME_DIR = os.path.join(os.getcwd(), DEFAULT_GAME_DIR_NAME)
 
 USERNAME = ""

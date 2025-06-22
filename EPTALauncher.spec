@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='launcher',
+    name='EPTALauncher',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -36,4 +36,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['epta_icon_64x64.ico'],
+    hide_console='minimize-late',
 )
