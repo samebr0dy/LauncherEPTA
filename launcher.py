@@ -235,25 +235,36 @@ class LauncherWindow(QtWidgets.QWidget):
             )
 
         layout = QtWidgets.QVBoxLayout(self)
+        layout.setAlignment(QtCore.Qt.AlignTop)
 
-        layout.addWidget(OutlinedLabel("Никнейм:"))
+        user_group = QtWidgets.QVBoxLayout()
+        user_group.setSpacing(0)
+        user_group.addWidget(OutlinedLabel("Никнейм:"))
         self.username_entry = QtWidgets.QLineEdit()
         self.username_entry.setText(USERNAME)
-        layout.addWidget(self.username_entry)
+        user_group.addWidget(self.username_entry)
+        layout.addLayout(user_group)
 
-        layout.addWidget(OutlinedLabel("Расположение Minecraft:"))
+        dir_group = QtWidgets.QVBoxLayout()
+        dir_group.setSpacing(0)
+        dir_group.addWidget(OutlinedLabel("Расположение Minecraft:"))
         dir_layout = QtWidgets.QHBoxLayout()
         self.game_dir_var = QtWidgets.QLineEdit(GAME_DIR)
         dir_layout.addWidget(self.game_dir_var)
         browse_btn = QtWidgets.QPushButton("Browse")
         browse_btn.clicked.connect(self.browse_dir)
         dir_layout.addWidget(browse_btn)
-        layout.addLayout(dir_layout)
+        dir_group.addLayout(dir_layout)
+        layout.addLayout(dir_group)
 
-        layout.addWidget(OutlinedLabel("Дополнительные параметры запуска:"))
+        args_group = QtWidgets.QVBoxLayout()
+        args_group.setSpacing(0)
+        args_group.addWidget(OutlinedLabel("Дополнительные параметры запуска:"))
         self.launch_cmd_var = QtWidgets.QLineEdit(EXTRA_ARGS)
-        layout.addWidget(self.launch_cmd_var)
+        args_group.addWidget(self.launch_cmd_var)
+        layout.addLayout(args_group)
 
+        btn_layout = QtWidgets.QHBoxLayout()
         self.update_btn = QtWidgets.QPushButton("Проверить обновления")
         self.launch_btn = QtWidgets.QPushButton("ЗАПУСТИТЬ")
         for btn in (self.update_btn, self.launch_btn, browse_btn):
@@ -264,8 +275,9 @@ class LauncherWindow(QtWidgets.QWidget):
 
         self.update_btn.clicked.connect(self.update_game)
         self.launch_btn.clicked.connect(self.launch)
-        layout.addWidget(self.update_btn)
-        layout.addWidget(self.launch_btn)
+        btn_layout.addWidget(self.update_btn)
+        btn_layout.addWidget(self.launch_btn)
+        layout.addLayout(btn_layout)
 
         self.progress = QtWidgets.QProgressBar()
         self.progress.setTextVisible(True)
@@ -294,12 +306,17 @@ class LauncherWindow(QtWidgets.QWidget):
 
     def _perform_update(self):
         updated, message = check_for_update(progress_callback=self.set_progress)
+        QtCore.QMetaObject.invokeMethod(
+            self,
+            "_show_update_result",
+            QtCore.Qt.QueuedConnection,
+            QtCore.Q_ARG(str, message),
+        )
 
-        def finish():
-            self.set_progress("", 0)
-            QtWidgets.QMessageBox.information(self, "Update", message)
-
-        QtCore.QTimer.singleShot(0, finish)
+    @QtCore.pyqtSlot(str)
+    def _show_update_result(self, message: str):
+        self.set_progress("", 0)
+        QtWidgets.QMessageBox.information(self, "Update", message)
 
     def launch(self):
         username = self.username_entry.text().strip()
