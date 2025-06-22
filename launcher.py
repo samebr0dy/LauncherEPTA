@@ -336,11 +336,26 @@ class LauncherWindow(QtWidgets.QWidget):
         self.launch_btn = QtWidgets.QPushButton("ЗАПУСТИТЬ")
         for b in (self.update_btn, self.launch_btn):
             b.setFixedHeight(40)
-        for btn in (self.update_btn, self.launch_btn, browse_btn):
+
+        for btn in (self.update_btn, browse_btn):
             btn.setStyleSheet(
-                "QPushButton {" "color: white; " "background-color: rgba(37,48,37,160); " "border-radius: 10px;" "}"
+                "QPushButton {"
+                "color: white; "
+                "background-color: rgba(37,48,37,160); "
+                "border-radius: 10px;"
+                "}"
                 "QPushButton:pressed { background-color: rgba(44,58,44,160); }"
             )
+
+        # Give the launch button a slightly green background
+        self.launch_btn.setStyleSheet(
+            "QPushButton {"
+            "color: white; "
+            "background-color: rgba(60,150,60,160); "
+            "border-radius: 10px;"
+            "}"
+            "QPushButton:pressed { background-color: rgba(70,160,70,160); }"
+        )
 
         self.update_btn.clicked.connect(self.update_game)
         self.launch_btn.clicked.connect(self.launch)
