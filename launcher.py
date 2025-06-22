@@ -10,6 +10,13 @@ import shutil
 
 GITHUB_REPO = "samebr0dy/EPTAClient"
 
+# Default template for launching the game. ``{jar_path}`` and ``{username}``
+# will be replaced at runtime. You can customize this template in the
+# configuration file.
+DEFAULT_CMD_TEMPLATE = (
+    'java -cp "{jar_path}" net.minecraft.client.Main --username {username}'
+)
+
 # Location of the configuration file inside AppData (Windows) or ~/.config (Linux/Mac)
 if os.name == "nt":
     APPDATA_DIR = os.getenv("APPDATA", os.path.expanduser("~"))
@@ -24,12 +31,13 @@ GAME_DIR = os.path.join(os.getcwd(), DEFAULT_GAME_DIR_NAME)
 
 USERNAME = ""
 LAST_VERSION = None
-LAUNCH_CMD = ""
+BASE_CMD_TEMPLATE = DEFAULT_CMD_TEMPLATE
+EXTRA_ARGS = ""
 
 
 def load_config():
     """Load launcher configuration from CONFIG_FILE."""
-    global GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD
+    global GAME_DIR, USERNAME, LAST_VERSION, BASE_CMD_TEMPLATE, EXTRA_ARGS
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -37,18 +45,31 @@ def load_config():
                 GAME_DIR = data.get("game_dir", GAME_DIR)
                 USERNAME = data.get("username", "")
                 LAST_VERSION = data.get("last_version")
-                LAUNCH_CMD = data.get("launch_cmd", "")
-                if not LAUNCH_CMD:
-                    LAUNCH_CMD = get_default_launch_cmd(USERNAME)
+                BASE_CMD_TEMPLATE = data.get(
+                    "base_cmd_template",
+                    data.get("launch_cmd", DEFAULT_CMD_TEMPLATE),
+                )
+                EXTRA_ARGS = data.get("extra_args", "")
+                if not BASE_CMD_TEMPLATE:
+                    BASE_CMD_TEMPLATE = DEFAULT_CMD_TEMPLATE
         except json.JSONDecodeError:
             pass
 
 
-def save_config(game_dir, username, version, launch_cmd):
+def save_config(game_dir, username, version, base_cmd_template, extra_args):
     """Save launcher configuration to CONFIG_FILE."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump({"game_dir": game_dir, "username": username, "last_version": version, "launch_cmd": launch_cmd}, f)
+        json.dump(
+            {
+                "game_dir": game_dir,
+                "username": username,
+                "last_version": version,
+                "base_cmd_template": base_cmd_template,
+                "extra_args": extra_args,
+            },
+            f,
+        )
 
 def get_latest_release_info():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -69,14 +90,14 @@ def download_asset(asset_url, dest_path):
 
 
 def get_default_launch_cmd(username):
-    """Return the default command string used to launch the game."""
+    """Return the launch command using DEFAULT_CMD_TEMPLATE."""
     jar_path = os.path.join(
         GAME_DIR,
         "versions",
         "Forge 1.20.1",
         "Forge 1.20.1.jar",
     )
-    return f'java -cp "{jar_path}" net.minecraft.client.Main --username {username}'
+    return DEFAULT_CMD_TEMPLATE.format(jar_path=jar_path, username=username)
 
 
 def check_for_update():
@@ -121,14 +142,20 @@ def check_for_update():
                 return False, "Downloaded file is not a valid zip archive"
             os.remove(zip_path)
             LAST_VERSION = latest_version
-            save_config(GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD)
+            save_config(
+                GAME_DIR,
+                USERNAME,
+                LAST_VERSION,
+                BASE_CMD_TEMPLATE,
+                EXTRA_ARGS,
+            )
             return True, f"Updated to {latest_version}"
         return False, "Failed to download release"
     return False, "Already up to date"
 
 
-def launch_game(cmd_string):
-    """Launch the game using the specified command string."""
+def launch_game():
+    """Launch the game using BASE_CMD_TEMPLATE and EXTRA_ARGS."""
     jar_path = os.path.join(
         GAME_DIR,
         "versions",
@@ -138,6 +165,8 @@ def launch_game(cmd_string):
     if not os.path.exists(jar_path):
         messagebox.showerror("Error", "Game not found. Update first.")
         return
+    base_cmd = BASE_CMD_TEMPLATE.format(jar_path=jar_path, username=USERNAME)
+    cmd_string = f"{base_cmd} {EXTRA_ARGS}".strip()
     subprocess.Popen(cmd_string, shell=True)
 
 
@@ -159,9 +188,8 @@ class LauncherWindow(tk.Tk):
         tk.Button(dir_frame, text="Browse", command=self.browse_dir).pack(side=tk.LEFT)
         dir_frame.pack(pady=5)
 
-        default_cmd = LAUNCH_CMD or get_default_launch_cmd(USERNAME)
-        tk.Label(self, text="Launch Command:").pack(pady=5)
-        self.launch_cmd_var = tk.StringVar(value=default_cmd)
+        tk.Label(self, text="Additional Launch Arguments:").pack(pady=5)
+        self.launch_cmd_var = tk.StringVar(value=EXTRA_ARGS)
         tk.Entry(self, textvariable=self.launch_cmd_var, width=50).pack(pady=5)
 
         update_btn = tk.Button(self, text="Check for Update", command=self.update_game)
@@ -176,11 +204,11 @@ class LauncherWindow(tk.Tk):
             self.game_dir_var.set(path)
 
     def update_game(self):
-        global GAME_DIR, USERNAME, LAUNCH_CMD
+        global GAME_DIR, USERNAME, EXTRA_ARGS
         GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
         USERNAME = self.username_entry.get().strip()
-        LAUNCH_CMD = self.launch_cmd_var.get()
-        save_config(GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD)
+        EXTRA_ARGS = self.launch_cmd_var.get()
+        save_config(GAME_DIR, USERNAME, LAST_VERSION, BASE_CMD_TEMPLATE, EXTRA_ARGS)
         updated, message = check_for_update()
         messagebox.showinfo("Update", message)
 
@@ -189,12 +217,12 @@ class LauncherWindow(tk.Tk):
         if not username:
             messagebox.showerror("Error", "Username required")
             return
-        global GAME_DIR, USERNAME, LAUNCH_CMD
+        global GAME_DIR, USERNAME, EXTRA_ARGS
         GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
         USERNAME = username
-        LAUNCH_CMD = self.launch_cmd_var.get()
-        save_config(GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD)
-        launch_game(LAUNCH_CMD)
+        EXTRA_ARGS = self.launch_cmd_var.get()
+        save_config(GAME_DIR, USERNAME, LAST_VERSION, BASE_CMD_TEMPLATE, EXTRA_ARGS)
+        launch_game()
 
 
 def main():
