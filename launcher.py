@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from tkinter import ttk
+from tkinter import PhotoImage
 import threading
 import requests
 import os
@@ -203,7 +204,7 @@ class LauncherWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("EPTA Launcher")
-        self.geometry("400x250")
+        self.geometry("400x300")
 
         tk.Label(self, text="Никнейм:").pack(pady=5)
         self.username_entry = tk.Entry(self)
