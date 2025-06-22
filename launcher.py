@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
+from tkinter import ttk
+import threading
 import requests
 import os
 import subprocess
@@ -89,12 +91,21 @@ def get_latest_release_info():
     return None
 
 
-def download_asset(asset_url, dest_path):
+def download_asset(asset_url, dest_path, progress_callback=None):
     response = requests.get(asset_url, timeout=10, stream=True)
     if response.status_code == 200:
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
         with open(dest_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total and progress_callback:
+                        percent = downloaded * 100 / total
+                        progress_callback("Downloading", percent)
+        if progress_callback:
+            progress_callback("Downloading", 100)
         return True
     return False
 
@@ -104,7 +115,7 @@ def get_default_launch_cmd(username):
     return DEFAULT_CMD_TEMPLATE.format(GAME_DIR=GAME_DIR, username=username)
 
 
-def check_for_update():
+def check_for_update(progress_callback=None):
     """Check GitHub for a new release and install it if available."""
     global LAST_VERSION
     info = get_latest_release_info()
@@ -119,11 +130,19 @@ def check_for_update():
 
         os.makedirs(GAME_DIR, exist_ok=True)
         zip_path = os.path.join(GAME_DIR, f"{latest_version}.zip")
-        if download_asset(zip_url, zip_path):
+        if progress_callback:
+            progress_callback("Downloading", 0)
+        if download_asset(zip_url, zip_path, progress_callback):
             try:
                 tmp_dir = tempfile.mkdtemp()
                 with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                    zip_ref.extractall(tmp_dir)
+                    members = zip_ref.infolist()
+                    total_members = len(members) or 1
+                    for i, member in enumerate(members, 1):
+                        zip_ref.extract(member, tmp_dir)
+                        if progress_callback:
+                            percent = i * 100 / total_members
+                            progress_callback("Extracting", percent)
                 root_items = os.listdir(tmp_dir)
                 if len(root_items) == 1 and os.path.isdir(os.path.join(tmp_dir, root_items[0])):
                     src_root = os.path.join(tmp_dir, root_items[0])
@@ -141,6 +160,8 @@ def check_for_update():
                             os.remove(dst)
                         shutil.move(src, dst)
                 shutil.rmtree(tmp_dir)
+                if progress_callback:
+                    progress_callback("Installing", 100)
             except zipfile.BadZipFile:
                 os.remove(zip_path)
                 return False, "Downloaded file is not a valid zip archive"
@@ -152,6 +173,8 @@ def check_for_update():
                 LAST_VERSION,
                 EXTRA_ARGS,
             )
+            if progress_callback:
+                progress_callback("Done", 100)
             return True, f"Updated to {latest_version}"
         return False, "Failed to download release"
     return False, "Already up to date"
@@ -204,6 +227,21 @@ class LauncherWindow(tk.Tk):
         launch_btn = tk.Button(self, text="ЗАПУСТИТЬ", command=self.launch)
         launch_btn.pack(pady=5)
 
+        # Progress bar and label for update process
+        self.progress_frame = tk.Frame(self)
+        self.progress_frame.pack(fill="x", pady=(10, 0))
+        self.progress = ttk.Progressbar(self.progress_frame, orient="horizontal", mode="determinate")
+        self.progress.pack(fill="x")
+        self.progress_label = tk.Label(self.progress_frame, text="")
+        self.progress_label.place(relx=0.5, rely=0.5, anchor="center")
+
+    def set_progress(self, stage, percent):
+        """Update the progress bar and label from any thread."""
+        def _update():
+            self.progress["value"] = percent
+            self.progress_label.config(text=f"{stage} {percent:.0f}%")
+        self.after(0, _update)
+
     def browse_dir(self):
         path = filedialog.askdirectory(initialdir=self.game_dir_var.get())
         if path:
@@ -215,8 +253,14 @@ class LauncherWindow(tk.Tk):
         USERNAME = self.username_entry.get().strip()
         EXTRA_ARGS = self.launch_cmd_var.get()
         save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS)
-        updated, message = check_for_update()
-        messagebox.showinfo("Update", message)
+        threading.Thread(target=self._perform_update, daemon=True).start()
+
+    def _perform_update(self):
+        updated, message = check_for_update(progress_callback=self.set_progress)
+        def finish():
+            self.set_progress("", 0)
+            messagebox.showinfo("Update", message)
+        self.after(0, finish)
 
     def launch(self):
         username = self.username_entry.get().strip()
