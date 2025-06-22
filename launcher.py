@@ -235,7 +235,6 @@ class LauncherWindow(QtWidgets.QWidget):
             )
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setAlignment(QtCore.Qt.AlignTop)
 
         user_group = QtWidgets.QVBoxLayout()
         user_group.setSpacing(0)
@@ -263,6 +262,7 @@ class LauncherWindow(QtWidgets.QWidget):
         self.launch_cmd_var = QtWidgets.QLineEdit(EXTRA_ARGS)
         args_group.addWidget(self.launch_cmd_var)
         layout.addLayout(args_group)
+        layout.addStretch(1)
 
         btn_layout = QtWidgets.QHBoxLayout()
         self.update_btn = QtWidgets.QPushButton("Проверить обновления")
