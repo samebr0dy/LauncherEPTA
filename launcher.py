@@ -8,13 +8,20 @@ import subprocess
 import requests
 
 import warnings
+
 # Suppress PyQt SIP deprecation messages that fire when subclassing widgets
 warnings.filterwarnings(
     "ignore",
     message=r".*sipPyTypeDict.*",
     category=DeprecationWarning,
 )
+
 from PyQt5 import QtWidgets, QtGui, QtCore
+
+# Suppress deprecated SIP warnings from PyQt on Python 3.12+
+warnings.filterwarnings(
+    "ignore", message="sipPyTypeDict() is deprecated", category=DeprecationWarning
+)
 
 
 GITHUB_REPO = "samebr0dy/EPTAClient"
