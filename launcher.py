@@ -305,8 +305,24 @@ class LauncherWindow(QtWidgets.QWidget):
 
         args_group = QtWidgets.QVBoxLayout()
         args_group.setSpacing(0)
-        args_group.addWidget(OutlinedLabel("Дополнительные параметры запуска:"))
+
+        args_label_layout = QtWidgets.QHBoxLayout()
+        args_label = OutlinedLabel("Дополнительные параметры запуска:")
+        info_label = QtWidgets.QLabel("?")
+        info_label.setAlignment(QtCore.Qt.AlignCenter)
+        info_label.setFixedWidth(15)
+        info_text = (
+            "Аргументы командной строки, которые будут переданы Java при запуске. "
+            "Например: -Xmx4G -Xms2G"
+        )
+        info_label.setToolTip(info_text)
+        args_label_layout.addWidget(args_label)
+        args_label_layout.addWidget(info_label)
+        args_label_layout.addStretch(1)
+        args_group.addLayout(args_label_layout)
+
         self.launch_cmd_var = QtWidgets.QLineEdit(EXTRA_ARGS)
+        self.launch_cmd_var.setToolTip(info_text)
         args_group.addWidget(self.launch_cmd_var)
         layout.addLayout(args_group)
         layout.addStretch(1)
@@ -314,6 +330,8 @@ class LauncherWindow(QtWidgets.QWidget):
         btn_layout = QtWidgets.QHBoxLayout()
         self.update_btn = QtWidgets.QPushButton("Проверить обновления")
         self.launch_btn = QtWidgets.QPushButton("ЗАПУСТИТЬ")
+        for b in (self.update_btn, self.launch_btn):
+            b.setFixedHeight(40)
         for btn in (self.update_btn, self.launch_btn, browse_btn):
             btn.setStyleSheet(
                 "QPushButton {" "color: white; " "background-color: rgba(37,48,37,160); " "border-radius: 10px;" "}"
