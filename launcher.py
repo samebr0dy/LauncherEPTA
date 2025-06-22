@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from tkinter import ttk
+import threading
 import requests
 import os
 import subprocess
@@ -235,10 +236,11 @@ class LauncherWindow(tk.Tk):
         self.progress_label.place(relx=0.5, rely=0.5, anchor="center")
 
     def set_progress(self, stage, percent):
-        """Update the progress bar and label."""
-        self.progress["value"] = percent
-        self.progress_label.config(text=f"{stage} {percent:.0f}%")
-        self.update_idletasks()
+        """Update the progress bar and label from any thread."""
+        def _update():
+            self.progress["value"] = percent
+            self.progress_label.config(text=f"{stage} {percent:.0f}%")
+        self.after(0, _update)
 
     def browse_dir(self):
         path = filedialog.askdirectory(initialdir=self.game_dir_var.get())
@@ -251,10 +253,15 @@ class LauncherWindow(tk.Tk):
         USERNAME = self.username_entry.get().strip()
         EXTRA_ARGS = self.launch_cmd_var.get()
         save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS)
+
+        threading.Thread(target=self._perform_update, daemon=True).start()
+
+    def _perform_update(self):
         updated, message = check_for_update(progress_callback=self.set_progress)
-        # Reset progress bar when done
-        self.set_progress("", 0)
-        messagebox.showinfo("Update", message)
+        def finish():
+            self.set_progress("", 0)
+            messagebox.showinfo("Update", message)
+        self.after(0, finish)
 
     def launch(self):
         username = self.username_entry.get().strip()
