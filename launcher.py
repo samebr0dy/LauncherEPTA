@@ -5,6 +5,7 @@ import tempfile
 import shutil
 import threading
 import subprocess
+import sys
 import requests
 
 import warnings
@@ -17,6 +18,15 @@ warnings.filterwarnings(
 )
 
 from PyQt5 import QtWidgets, QtGui, QtCore
+
+
+def resource_path(relative: str) -> str:
+    """Return absolute path to resource for dev and PyInstaller."""
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
+    else:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, relative)
 
 # Suppress deprecated SIP warnings from PyQt on Python 3.12+
 warnings.filterwarnings(
@@ -222,7 +232,7 @@ class LauncherWindow(QtWidgets.QWidget):
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         self.setAutoFillBackground(True)
 
-        bg_path = os.path.join(os.path.dirname(__file__), "background.png")
+        bg_path = resource_path("background.png")
         if os.path.exists(bg_path):
             # Qt stylesheets choke on backslashes; use forward slashes
             qpath = os.path.abspath(bg_path).replace("\\", "/")
