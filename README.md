@@ -9,6 +9,8 @@ This project provides a minimal launcher for Minecraft written in Python. It can
 - Basic Tkinter interface to update and launch the game.
 - Lets you choose where the game files are installed.
 - Stores the username, game directory and installed version in `AppData/EPTAData` (or `~/.config/EPTAData`).
+- Allows setting a custom base Java command in the config and appending extra
+  launch arguments through the UI.
 
 ## Usage
 1. Install the dependencies:
@@ -23,6 +25,10 @@ This project provides a minimal launcher for Minecraft written in Python. It can
 4. Enter a username and select a folder where the game should be installed.
    Press **Check for Update** to download the release via `zipball_url` and extract it.
    Afterwards press **Launch** to start the game.
+   You can customise the Java command used to start the game by editing
+   `config.json` inside `AppData/EPTAData` (or `~/.config/EPTAData`) and
+   changing the `base_cmd_template` value. Arguments typed in the **Additional
+   Launch Arguments** field will be appended to this command when launching.
 
 ## Microsoft Login
 The launcher contains only offline launching capabilities. Implementing Microsoft (Mojang) authentication requires access to Microsoft's login services, which may not be reachable in this environment.
