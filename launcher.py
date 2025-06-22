@@ -104,9 +104,9 @@ def download_asset(asset_url, dest_path, progress_callback=None):
                     downloaded += len(chunk)
                     if total and progress_callback:
                         percent = downloaded * 100 / total
-                        progress_callback("Downloading", percent)
+                        progress_callback("Скачивание (может не обновлять состояние, ждите)", percent)
         if progress_callback:
-            progress_callback("Downloading", 100)
+            progress_callback("Скачивание (может не обновлять состояние, ждите)", 100)
         return True
     return False
 
@@ -121,7 +121,7 @@ def check_for_update(progress_callback=None):
     global LAST_VERSION
     info = get_latest_release_info()
     if not info:
-        return False, "Failed to fetch release info"
+        return False, "Ошибка в поиске последнего релиза"
 
     latest_version = info.get("tag_name") or info.get("name")
     jar_path = os.path.join(
@@ -138,7 +138,7 @@ def check_for_update(progress_callback=None):
         os.makedirs(GAME_DIR, exist_ok=True)
         zip_path = os.path.join(GAME_DIR, f"{latest_version}.zip")
         if progress_callback:
-            progress_callback("Downloading", 0)
+            progress_callback("Скачивание (может не обновлять состояние, ждите)", 0)
         if download_asset(zip_url, zip_path, progress_callback):
             try:
                 tmp_dir = tempfile.mkdtemp()
@@ -149,7 +149,7 @@ def check_for_update(progress_callback=None):
                         zip_ref.extract(member, tmp_dir)
                         if progress_callback:
                             percent = i * 100 / total_members
-                            progress_callback("Extracting", percent)
+                            progress_callback("Распаковка", percent)
                 root_items = os.listdir(tmp_dir)
                 if len(root_items) == 1 and os.path.isdir(os.path.join(tmp_dir, root_items[0])):
                     src_root = os.path.join(tmp_dir, root_items[0])
@@ -168,10 +168,10 @@ def check_for_update(progress_callback=None):
                         shutil.move(src, dst)
                 shutil.rmtree(tmp_dir)
                 if progress_callback:
-                    progress_callback("Installing", 100)
+                    progress_callback("Установка", 100)
             except zipfile.BadZipFile:
                 os.remove(zip_path)
-                return False, "Downloaded file is not a valid zip archive"
+                return False, "Скачанный файл не валидный zip-архив"
             os.remove(zip_path)
             LAST_VERSION = latest_version
             save_config(
@@ -182,9 +182,9 @@ def check_for_update(progress_callback=None):
             )
             if progress_callback:
                 progress_callback("Done", 100)
-            return True, f"Updated to {latest_version}"
-        return False, "Failed to download release"
-    return False, "Already up to date"
+            return True, f"Обновлено до {latest_version}!"
+        return False, "Ошибка при скачивании обновления"
+    return False, "У Вас последняя версия!"
 
 
 def launch_game():
@@ -196,7 +196,7 @@ def launch_game():
         "Forge-1.20.1.jar",
     )
     if not os.path.exists(jar_path):
-        messagebox.showerror("Error", "Game not found. Update first.")
+        messagebox.showerror("Error", "Игра не найдена, сначала обновитесь")
         return
     args_file = write_args_file(GAME_DIR)
     base_cmd = DEFAULT_CMD_TEMPLATE.format(ARGS_FILE=args_file)
@@ -280,7 +280,7 @@ class LauncherWindow(tk.Tk):
     def launch(self):
         username = self.username_entry.get().strip()
         if not username:
-            messagebox.showerror("Error", "Username required")
+            messagebox.showerror("Error", "Требуется никнейм")
             return
         global GAME_DIR, USERNAME, EXTRA_ARGS
         GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
