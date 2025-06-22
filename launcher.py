@@ -24,11 +24,12 @@ GAME_DIR = os.path.join(os.getcwd(), DEFAULT_GAME_DIR_NAME)
 
 USERNAME = ""
 LAST_VERSION = None
+LAUNCH_CMD = ""
 
 
 def load_config():
     """Load launcher configuration from CONFIG_FILE."""
-    global GAME_DIR, USERNAME, LAST_VERSION
+    global GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -36,15 +37,18 @@ def load_config():
                 GAME_DIR = data.get("game_dir", GAME_DIR)
                 USERNAME = data.get("username", "")
                 LAST_VERSION = data.get("last_version")
+                LAUNCH_CMD = data.get("launch_cmd", "")
+                if not LAUNCH_CMD:
+                    LAUNCH_CMD = get_default_launch_cmd(USERNAME)
         except json.JSONDecodeError:
             pass
 
 
-def save_config(game_dir, username, version):
+def save_config(game_dir, username, version, launch_cmd):
     """Save launcher configuration to CONFIG_FILE."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump({"game_dir": game_dir, "username": username, "last_version": version}, f)
+        json.dump({"game_dir": game_dir, "username": username, "last_version": version, "launch_cmd": launch_cmd}, f)
 
 def get_latest_release_info():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -62,6 +66,17 @@ def download_asset(asset_url, dest_path):
                 f.write(chunk)
         return True
     return False
+
+
+def get_default_launch_cmd(username):
+    """Return the default command string used to launch the game."""
+    jar_path = os.path.join(
+        GAME_DIR,
+        "versions",
+        "Forge 1.20.1",
+        "Forge 1.20.1.jar",
+    )
+    return f'java -cp "{jar_path}" net.minecraft.client.Main --username {username}'
 
 
 def check_for_update():
@@ -106,14 +121,14 @@ def check_for_update():
                 return False, "Downloaded file is not a valid zip archive"
             os.remove(zip_path)
             LAST_VERSION = latest_version
-            save_config(GAME_DIR, USERNAME, LAST_VERSION)
+            save_config(GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD)
             return True, f"Updated to {latest_version}"
         return False, "Failed to download release"
     return False, "Already up to date"
 
 
-def launch_game(username):
-    """Launch the game using the installed JDK."""
+def launch_game(cmd_string):
+    """Launch the game using the specified command string."""
     jar_path = os.path.join(
         GAME_DIR,
         "versions",
@@ -123,25 +138,14 @@ def launch_game(username):
     if not os.path.exists(jar_path):
         messagebox.showerror("Error", "Game not found. Update first.")
         return
-    # Use the jar on the classpath so that Minecraft's main class can be found
-    # even if the jar isn't marked as executable. Forge-based packs often rely
-    # on additional libraries rather than a fat jar.
-    cmd = [
-        "java",
-        "-cp",
-        jar_path,
-        "net.minecraft.client.Main",
-        "--username",
-        username,
-    ]
-    subprocess.Popen(cmd)
+    subprocess.Popen(cmd_string, shell=True)
 
 
 class LauncherWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Simple Minecraft Launcher")
-        self.geometry("400x200")
+        self.geometry("400x250")
 
         tk.Label(self, text="Username:").pack(pady=5)
         self.username_entry = tk.Entry(self)
@@ -155,6 +159,11 @@ class LauncherWindow(tk.Tk):
         tk.Button(dir_frame, text="Browse", command=self.browse_dir).pack(side=tk.LEFT)
         dir_frame.pack(pady=5)
 
+        default_cmd = LAUNCH_CMD or get_default_launch_cmd(USERNAME)
+        tk.Label(self, text="Launch Command:").pack(pady=5)
+        self.launch_cmd_var = tk.StringVar(value=default_cmd)
+        tk.Entry(self, textvariable=self.launch_cmd_var, width=50).pack(pady=5)
+
         update_btn = tk.Button(self, text="Check for Update", command=self.update_game)
         update_btn.pack(pady=5)
 
@@ -167,10 +176,11 @@ class LauncherWindow(tk.Tk):
             self.game_dir_var.set(path)
 
     def update_game(self):
-        global GAME_DIR, USERNAME
+        global GAME_DIR, USERNAME, LAUNCH_CMD
         GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
         USERNAME = self.username_entry.get().strip()
-        save_config(GAME_DIR, USERNAME, LAST_VERSION)
+        LAUNCH_CMD = self.launch_cmd_var.get()
+        save_config(GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD)
         updated, message = check_for_update()
         messagebox.showinfo("Update", message)
 
@@ -179,11 +189,12 @@ class LauncherWindow(tk.Tk):
         if not username:
             messagebox.showerror("Error", "Username required")
             return
-        global GAME_DIR, USERNAME
+        global GAME_DIR, USERNAME, LAUNCH_CMD
         GAME_DIR = self.game_dir_var.get().strip() or GAME_DIR
         USERNAME = username
-        save_config(GAME_DIR, USERNAME, LAST_VERSION)
-        launch_game(username)
+        LAUNCH_CMD = self.launch_cmd_var.get()
+        save_config(GAME_DIR, USERNAME, LAST_VERSION, LAUNCH_CMD)
+        launch_game(LAUNCH_CMD)
 
 
 def main():
