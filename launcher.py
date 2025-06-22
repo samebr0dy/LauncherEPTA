@@ -225,11 +225,11 @@ class LauncherWindow(QtWidgets.QWidget):
             # Qt stylesheets choke on backslashes; use forward slashes
             qpath = os.path.abspath(bg_path).replace("\\", "/")
             self.setStyleSheet(
-                f"#launcher_window {{ "
+                "#launcher_window { "
                 f"background-image: url('{qpath}'); "
                 "background-position: center; "
                 "background-repeat: no-repeat; "
-                "}}"
+                "}"
             )
 
         layout = QtWidgets.QVBoxLayout(self)
