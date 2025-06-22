@@ -49,7 +49,7 @@ To distribute the launcher as a standalone Windows application, you can build an
    ```
 2. Run PyInstaller from the project directory:
    ```bash
-   pyinstaller --onefile --add-data background.png;. launcher.py
+   pyinstaller --onefile --add-data background.png:. launcher.py
    ```
    On Linux or macOS replace the semicolon (`;`) after the image name with a
    colon (`:`).

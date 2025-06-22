@@ -1,3 +1,5 @@
 /logs
 /config
+/build
+/dist
 args.txt
