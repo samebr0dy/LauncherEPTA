@@ -7,6 +7,13 @@ import threading
 import subprocess
 import requests
 
+import warnings
+# Suppress PyQt SIP deprecation messages that fire when subclassing widgets
+warnings.filterwarnings(
+    "ignore",
+    message=r".*sipPyTypeDict.*",
+    category=DeprecationWarning,
+)
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 
@@ -203,10 +210,20 @@ class LauncherWindow(QtWidgets.QWidget):
         self.setWindowTitle("EPTA Launcher")
         self.setFixedSize(400, 300)
 
+        # Give the widget an object name so we can target it in the stylesheet
+        self.setObjectName("launcher_window")
+
         bg_path = os.path.join(os.path.dirname(__file__), "background.png")
         if os.path.exists(bg_path):
-            qpath = QtCore.QUrl.fromLocalFile(bg_path).path
-            self.setStyleSheet(f"QWidget {{ background-image: url({qpath}); }}")
+            # Qt stylesheets choke on backslashes; use forward slashes
+            qpath = os.path.abspath(bg_path).replace("\\", "/")
+            self.setStyleSheet(
+                f"#launcher_window {{ "
+                f"background-image: url('{qpath}'); "
+                "background-position: center; "
+                "background-repeat: no-repeat; "
+                "}}"
+            )
 
         layout = QtWidgets.QVBoxLayout(self)
 
