@@ -11,6 +11,8 @@ This project provides a minimal launcher for Minecraft written in Python. It can
 - Stores the username, game directory and installed version in `AppData/EPTAData` (or `~/.config/EPTAData`).
 - Allows setting a custom base Java command in the config and appending extra
   launch arguments through the UI.
+- Uses a temporary argument file when launching so the Java command stays short
+  and does not hit the Windows command length limit.
 
 ## Usage
 1. Install the dependencies:
@@ -27,8 +29,10 @@ This project provides a minimal launcher for Minecraft written in Python. It can
    Afterwards press **Launch** to start the game.
    You can customise the Java command used to start the game by editing
    `config.json` inside `AppData/EPTAData` (or `~/.config/EPTAData`) and
-   changing the `base_cmd_template` value. Arguments typed in the **Additional
-   Launch Arguments** field will be appended to this command when launching.
+    changing the `base_cmd_template` value. Arguments typed in the **Additional
+    Launch Arguments** field will be appended to this command when launching.
+    The launcher writes all JVM options to a temporary `args.txt` file before
+    starting Java so the command line stays short on Windows.
 
 ## Microsoft Login
 The launcher contains only offline launching capabilities. Implementing Microsoft (Mojang) authentication requires access to Microsoft's login services, which may not be reachable in this environment.
