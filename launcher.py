@@ -33,6 +33,7 @@ LAST_VERSION = None
 # Command-line options and classpath used when launching the game.
 # {GAME_DIR} will be replaced by the selected game directory.
 JAVA_ARGS_TEMPLATE = r"""
+-Djava.net.preferIPv4Stack=true
 -Xms3031M -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:MaxGCPauseMillis=200 -XX:+AlwaysPreTouch
 -XX:+ParallelRefProcEnabled -XX:+UseG1GC -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M
 -XX:G1ReservePercent=20 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4
