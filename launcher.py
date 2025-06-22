@@ -368,12 +368,19 @@ class LauncherWindow(QtWidgets.QWidget):
         self.progress.setValue(0)
         layout.addWidget(self.progress)
 
-    def set_progress(self, stage: str, percent: float):
-        def _update():
-            self.progress.setValue(int(percent))
-            self.progress.setFormat(f"{stage} {percent:.0f}%")
+    @QtCore.pyqtSlot(str, float)
+    def _update_progress(self, stage: str, percent: float):
+        self.progress.setValue(int(percent))
+        self.progress.setFormat(f"{stage} {percent:.0f}%")
 
-        QtCore.QTimer.singleShot(0, _update)
+    def set_progress(self, stage: str, percent: float):
+        QtCore.QMetaObject.invokeMethod(
+            self,
+            "_update_progress",
+            QtCore.Qt.QueuedConnection,
+            QtCore.Q_ARG(str, stage),
+            QtCore.Q_ARG(float, percent),
+        )
 
     def browse_dir(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Выберите директорию для игры", self.game_dir_var.text())
