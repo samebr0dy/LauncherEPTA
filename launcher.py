@@ -203,7 +203,7 @@ class OutlinedLabel(QtWidgets.QLabel):
         metrics = QtGui.QFontMetricsF(font)
         path = QtGui.QPainterPath()
         path.addText(0, metrics.ascent(), font, self.text())
-        painter.setPen(QtGui.QPen(QtCore.Qt.white, 2))
+        painter.setPen(QtGui.QPen(QtCore.Qt.white, 1))
         painter.setBrush(QtCore.Qt.NoBrush)
         painter.drawPath(path)
         painter.setPen(QtGui.QPen(QtCore.Qt.white))
@@ -219,6 +219,8 @@ class LauncherWindow(QtWidgets.QWidget):
 
         # Give the widget an object name so we can target it in the stylesheet
         self.setObjectName("launcher_window")
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        self.setAutoFillBackground(True)
 
         bg_path = os.path.join(os.path.dirname(__file__), "background.png")
         if os.path.exists(bg_path):
