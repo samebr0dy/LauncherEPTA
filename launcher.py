@@ -124,7 +124,13 @@ def check_for_update(progress_callback=None):
         return False, "Failed to fetch release info"
 
     latest_version = info.get("tag_name") or info.get("name")
-    if latest_version != LAST_VERSION:
+    jar_path = os.path.join(
+        GAME_DIR,
+        "versions",
+        "Forge-1.20.1",
+        "Forge-1.20.1.jar",
+    )
+    if latest_version != LAST_VERSION or not os.path.exists(jar_path):
         zip_url = info.get("zipball_url")
         if not zip_url:
             return False, "zipball_url not found"
@@ -205,6 +211,13 @@ class LauncherWindow(tk.Tk):
         super().__init__()
         self.title("EPTA Launcher")
         self.geometry("400x300")
+
+        bg_path = os.path.join(os.path.dirname(__file__), "background.png")
+        if os.path.exists(bg_path):
+            self.bg_image = PhotoImage(file=bg_path)
+            bg_label = tk.Label(self, image=self.bg_image)
+            bg_label.place(relwidth=1, relheight=1)
+            bg_label.lower()
 
         tk.Label(self, text="Никнейм:").pack(pady=5)
         self.username_entry = tk.Entry(self)
