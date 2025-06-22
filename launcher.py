@@ -253,6 +253,7 @@ class LauncherWindow(tk.Tk):
         USERNAME = self.username_entry.get().strip()
         EXTRA_ARGS = self.launch_cmd_var.get()
         save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS)
+
         threading.Thread(target=self._perform_update, daemon=True).start()
 
     def _perform_update(self):
