@@ -227,7 +227,7 @@ def launch_game():
         return
     args_file = write_args_file(GAME_DIR)
     base_cmd = DEFAULT_CMD_TEMPLATE.format(ARGS_FILE=args_file)
-    cmd_string = f"{EXTRA_ARGS} {base_cmd} --username {USERNAME}".strip()
+    cmd_string = f"{base_cmd} {EXTRA_ARGS} --username {USERNAME}".strip()
     subprocess.Popen(cmd_string, shell=True)
 
 
