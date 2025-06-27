@@ -207,7 +207,7 @@ class Backend(QtCore.QObject):
     progressChanged = QtCore.pyqtSignal(str, float)
     updateResult = QtCore.pyqtSignal(str)
 
-    @QtCore.pyqtSlot(result=dict)
+    @QtCore.pyqtSlot(result='QVariantMap')
     def get_config(self):
         return {
             "game_dir": GAME_DIR,
