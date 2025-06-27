@@ -1,3 +1,4 @@
+from PyQt5 import QtWidgets, QtGui, QtCore
 import os
 import json
 import zipfile
@@ -18,8 +19,6 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
-from PyQt5 import QtWidgets, QtGui, QtCore
-
 
 def resource_path(relative: str) -> str:
     """Return absolute path to resource for dev and PyInstaller."""
@@ -29,9 +28,11 @@ def resource_path(relative: str) -> str:
         base_path = os.path.dirname(__file__)
     return os.path.join(base_path, relative)
 
+
 # Suppress deprecated SIP warnings from PyQt on Python 3.12+
 warnings.filterwarnings(
-    "ignore", message="sipPyTypeDict() is deprecated", category=DeprecationWarning
+    "ignore", message="sipPyTypeDict() is deprecated",
+    category=DeprecationWarning
 )
 
 
