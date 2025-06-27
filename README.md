@@ -13,6 +13,7 @@ This project provides a minimal launcher for Minecraft written in Python. It can
   launch arguments through the UI.
 - Uses a temporary argument file when launching so the Java command stays short
   and does not hit the Windows command length limit.
+- Provides a button to add a desktop shortcut for quickly launching the game.
 
 ## Usage
 1. Install the dependencies:
