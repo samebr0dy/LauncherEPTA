@@ -1,2 +1,3 @@
 requests==2.32.4
 PyQt5==5.15.9
+cefpython3==66.1
