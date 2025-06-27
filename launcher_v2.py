@@ -292,6 +292,7 @@ class Backend(QtCore.QObject):
         save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS, RAM_MB, AUTO_UPDATE)
         self.progressChanged.emit("Запуск", 0)
         start_game(show_console)
+        self.progressChanged.emit("Запуск", 100)
 
     @QtCore.pyqtSlot(result=str)
     def browse_dir(self):
