@@ -40,7 +40,10 @@
 
         <div class="mb-3">
           <label for="game_dir" class="form-label">Расположение Minecraft</label>
-          <input type="text" class="form-control" id="game_dir" value="">
+          <div class="input-group">
+            <input type="text" class="form-control" id="game_dir" value="">
+            <button type="button" class="btn btn-secondary" onclick="browseGameDir()">Выбрать...</button>
+          </div>
         </div>
 
         <div class="mb-3">
@@ -76,8 +79,14 @@
         </div>
         <div class="mb-3">
           <label class="form-label">Другие настройки</label>
-          <div class="form-check"><input class="form-check-input" type="checkbox" checked> Включить консоль</div>
-          <div class="form-check"><input class="form-check-input" type="checkbox" checked> Автоматически устанавливать обновления</div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="enable_console" checked>
+            <label class="form-check-label" for="enable_console">Включить консоль</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="auto_update" checked>
+            <label class="form-check-label" for="auto_update">Автоматически устанавливать обновления</label>
+          </div>
         </div>
       </form>
     </div>
@@ -94,6 +103,7 @@
   <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
   <script>
     let backend;
+    let gameRunning = false;
     new QWebChannel(qt.webChannelTransport, function(channel) {
       backend = channel.objects.backend;
       if (backend.get_config) {
@@ -101,6 +111,12 @@
           document.getElementById('username').value = cfg.username || '';
           document.getElementById('game_dir').value = cfg.game_dir || '';
           document.getElementById('extra_args').value = cfg.extra_args || '';
+          document.getElementById('ram').value = cfg.ram_mb || 8192;
+          document.getElementById('form_ram').value = cfg.ram_mb || 8192;
+          document.getElementById('auto_update').checked = cfg.auto_update;
+          if (cfg.auto_update) {
+            updateGame(true);
+          }
         });
       }
       if (backend.progressChanged) {
@@ -114,20 +130,53 @@
       if (backend.updateResult) {
         backend.updateResult.connect(function(msg) { alert(msg); });
       }
+      if (backend.gameStateChanged) {
+        backend.gameStateChanged.connect(function(running) {
+          gameRunning = running;
+          const btn = document.querySelector('.btn-enter');
+          if (running) {
+            btn.textContent = 'ЗАКРЫТЬ ИГРУ';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-danger');
+          } else {
+            btn.textContent = 'ЗАПУСТИТЬ ИГРУ';
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-success');
+          }
+        });
+      }
     });
 
-    function updateGame() {
+    function browseGameDir() {
+      if (backend.browse_dir) {
+        backend.browse_dir(function(path) {
+          if (path) document.getElementById('game_dir').value = path;
+        });
+      }
+    }
+
+    function updateGame(quiet=false) {
       const username = document.getElementById('username').value;
       const gameDir = document.getElementById('game_dir').value;
       const extra = document.getElementById('extra_args').value;
-      backend.update_game(gameDir, username, extra);
+      const ram = parseInt(document.getElementById('ram').value || 0);
+      const autoUpdate = document.getElementById('auto_update').checked;
+      backend.update_game(gameDir, username, extra, ram, autoUpdate, quiet);
     }
 
     function launchGame() {
+      if (gameRunning) {
+        backend.close_game();
+        return;
+      }
       const username = document.getElementById('username').value;
       const gameDir = document.getElementById('game_dir').value;
       const extra = document.getElementById('extra_args').value;
-      backend.launch_game(gameDir, username, extra);
+      const ram = parseInt(document.getElementById('ram').value || 0);
+      const consoleEnabled = document.getElementById('enable_console').checked;
+      const autoUpdate = document.getElementById('auto_update').checked;
+      const fullExtra = `-Xmx${ram}M ${extra}`;
+      backend.launch_game(gameDir, username, fullExtra, consoleEnabled, autoUpdate, ram);
     }
   </script>
 </body>
