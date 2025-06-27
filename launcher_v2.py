@@ -12,6 +12,8 @@ import subprocess
 import shlex
 import re
 import requests
+import ctypes
+from ctypes import wintypes
 
 # Helper to locate resources when packaged with PyInstaller
 def resource_path(relative: str) -> str:
@@ -246,6 +248,50 @@ def start_game(show_console: bool):
     QtCore.QTimer.singleShot(300, lambda: Backend.instance.progressChanged.emit("", 0))
 
 
+def get_desktop_dir() -> str:
+    """Return path to the user's desktop directory."""
+    if os.name == "nt":
+        # Query Windows for the localized Desktop folder using the shell API
+        buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+        CSIDL_DESKTOP = 0  # <desktop>
+        if ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_DESKTOP, None, 0, buf) == 0:
+            return buf.value
+        return os.path.join(os.path.expanduser("~"), "Desktop")
+    return os.path.join(os.path.expanduser("~"), "Desktop")
+
+
+def create_desktop_shortcut() -> str:
+    """Create a launcher shortcut on the desktop and return the path."""
+    desktop = get_desktop_dir()
+    os.makedirs(desktop, exist_ok=True)
+
+    if getattr(sys, "frozen", False):
+        target_cmd = f'"{sys.executable}"'
+    else:
+        script = os.path.abspath(__file__)
+        target_cmd = f'"{sys.executable}" "{script}"'
+
+    if os.name == "nt":
+        shortcut_path = os.path.join(desktop, "EPTA Launcher.bat")
+        with open(shortcut_path, "w", encoding="utf-8") as f:
+            f.write(f"@echo off\n{target_cmd}\n")
+    else:
+        shortcut_path = os.path.join(desktop, "EPTA Launcher.desktop")
+        icon_path = resource_path("static/img/epta_icon_64x64.ico")
+        with open(shortcut_path, "w", encoding="utf-8") as f:
+            f.write("[Desktop Entry]\n")
+            f.write("Type=Application\n")
+            f.write("Name=EPTA Launcher\n")
+            f.write(f"Exec={target_cmd}\n")
+            f.write(f"Path={os.path.dirname(sys.executable)}\n")
+            if os.path.exists(icon_path):
+                f.write(f"Icon={icon_path}\n")
+            f.write("Terminal=false\n")
+        os.chmod(shortcut_path, 0o755)
+
+    return shortcut_path
+
+
 class Backend(QtCore.QObject):
     instance = None
     progressChanged = QtCore.pyqtSignal(str, float)
@@ -298,6 +344,14 @@ class Backend(QtCore.QObject):
     def browse_dir(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(None, "Выберите директорию для игры", GAME_DIR)
         return path or ""
+
+    @QtCore.pyqtSlot(result=str)
+    def create_shortcut(self):
+        try:
+            path = create_desktop_shortcut()
+            return f"Ярлык создан: {path}"
+        except Exception as e:
+            return f"Ошибка создания ярлыка: {e}"
 
     @QtCore.pyqtSlot()
     def close_game(self):
