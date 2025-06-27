@@ -55,6 +55,9 @@
         <div class="text-center mt-2">
           <button type="button" onclick="updateGame()" class="btn btn-outline-light">Проверить обновления</button>
         </div>
+        <div class="text-center mt-2">
+          <button type="button" onclick="createShortcut()" class="btn btn-outline-light">Добавить ярлык</button>
+        </div>
       </form>
     </div>
     <div class="col-8">
@@ -155,14 +158,20 @@
       }
     }
 
-    function updateGame(quiet=false) {
+  function updateGame(quiet=false) {
       const username = document.getElementById('username').value;
       const gameDir = document.getElementById('game_dir').value;
       const extra = document.getElementById('extra_args').value;
       const ram = parseInt(document.getElementById('ram').value || 0);
       const autoUpdate = document.getElementById('auto_update').checked;
       backend.update_game(gameDir, username, extra, ram, autoUpdate, quiet);
+  }
+
+  function createShortcut() {
+    if (backend.create_shortcut) {
+      backend.create_shortcut(function(msg) { alert(msg); });
     }
+  }
 
     function launchGame() {
       if (gameRunning) {
