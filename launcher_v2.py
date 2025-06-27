@@ -9,6 +9,7 @@ import tempfile
 import shutil
 import threading
 import subprocess
+import shlex
 import re
 import requests
 
@@ -208,15 +209,18 @@ def start_game(show_console: bool):
     if not check_java():
         return
     args_file = write_args_file(GAME_DIR)
-    base_cmd = DEFAULT_CMD_TEMPLATE.format(ARGS_FILE=args_file)
-    cmd_string = f"{base_cmd} -Xms3031M {EXTRA_ARGS} --username {USERNAME}".strip()
+    # Build command as argument list so we control quoting and can terminate the
+    # actual java process later
+    base = ["java", f"-Xmx{RAM_MB}M", "-Xms3031M", f"@{args_file}"]
+    extra_list = shlex.split(EXTRA_ARGS) if EXTRA_ARGS else []
+    cmd_list = base + extra_list + ["--username", USERNAME]
     if show_console:
         console_window = QtWidgets.QPlainTextEdit()
         console_window.setWindowTitle("Minecraft Console")
         console_window.setReadOnly(True)
         console_window.resize(800, 500)
         console_window.show()
-        proc = subprocess.Popen(cmd_string, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        proc = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         game_process = proc
         Backend.instance.gameStateChanged.emit(True)
 
@@ -229,7 +233,7 @@ def start_game(show_console: bool):
 
         threading.Thread(target=reader, daemon=True).start()
     else:
-        game_process = subprocess.Popen(cmd_string, shell=True)
+        game_process = subprocess.Popen(cmd_list)
         Backend.instance.gameStateChanged.emit(True)
 
         def waiter():
@@ -237,6 +241,9 @@ def start_game(show_console: bool):
             QtCore.QMetaObject.invokeMethod(Backend.instance, "_game_finished", QtCore.Qt.QueuedConnection)
 
         threading.Thread(target=waiter, daemon=True).start()
+
+    Backend.instance.progressChanged.emit("Запуск", 100)
+    QtCore.QTimer.singleShot(300, lambda: Backend.instance.progressChanged.emit("", 0))
 
 
 class Backend(QtCore.QObject):

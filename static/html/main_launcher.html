@@ -175,8 +175,7 @@
       const ram = parseInt(document.getElementById('ram').value || 0);
       const consoleEnabled = document.getElementById('enable_console').checked;
       const autoUpdate = document.getElementById('auto_update').checked;
-      const fullExtra = `-Xmx${ram}M ${extra}`;
-      backend.launch_game(gameDir, username, fullExtra, consoleEnabled, autoUpdate, ram);
+      backend.launch_game(gameDir, username, extra, consoleEnabled, autoUpdate, ram);
     }
   </script>
 </body>
