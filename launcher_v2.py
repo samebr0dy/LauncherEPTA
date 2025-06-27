@@ -12,6 +12,8 @@ import subprocess
 import shlex
 import re
 import requests
+import ctypes
+from ctypes import wintypes
 
 # Helper to locate resources when packaged with PyInstaller
 def resource_path(relative: str) -> str:
@@ -249,7 +251,12 @@ def start_game(show_console: bool):
 def get_desktop_dir() -> str:
     """Return path to the user's desktop directory."""
     if os.name == "nt":
-        return os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), "Desktop")
+        # Query Windows for the localized Desktop folder using the shell API
+        buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+        CSIDL_DESKTOP = 0  # <desktop>
+        if ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_DESKTOP, None, 0, buf) == 0:
+            return buf.value
+        return os.path.join(os.path.expanduser("~"), "Desktop")
     return os.path.join(os.path.expanduser("~"), "Desktop")
 
 
