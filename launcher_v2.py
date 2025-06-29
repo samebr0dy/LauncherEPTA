@@ -29,7 +29,7 @@ HTML_MAIN_PATH = resource_path(os.path.join("static", "html", "main_launcher.htm
 
 # GitHub repo for updates (launcher itself)
 GITHUB_REPO = "samebr0dy/EPTAClient"
-LAUNCHER_VERSION = "1.3"
+LAUNCHER_VERSION = "v1.2"
 LAUNCHER_REPO = "samebr0dy/LauncherEPTA"
 
 # Base URL for client updates
@@ -373,6 +373,24 @@ def get_desktop_dir() -> str:
     return os.path.join(os.path.expanduser("~"), "Desktop")
 
 
+def create_windows_shortcut(path: str, target: str, args: str, working_dir: str, icon: str) -> None:
+    """Create a .lnk shortcut using PowerShell."""
+    ps_script = (
+        "$WScriptShell = New-Object -ComObject WScript.Shell; "
+        f"$s = $WScriptShell.CreateShortcut({json.dumps(path)}); "
+        f"$s.TargetPath = {json.dumps(target)}; "
+        f"$s.Arguments = {json.dumps(args)}; "
+        f"$s.WorkingDirectory = {json.dumps(working_dir)}; "
+    )
+    if os.path.exists(icon):
+        ps_script += f"$s.IconLocation = {json.dumps(icon)}; "
+    ps_script += "$s.Save();"
+    subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+        check=True,
+    )
+
+
 def create_desktop_shortcut() -> str:
     """Create a launcher shortcut on the desktop and return the path."""
     desktop = get_desktop_dir()
@@ -384,18 +402,25 @@ def create_desktop_shortcut() -> str:
         script = os.path.abspath(__file__)
         target_cmd = f'"{sys.executable}" "{script}"'
 
-    shortcut_path = os.path.join(desktop, "EPTA Launcher.desktop")
-    icon_path = resource_path("static/img/epta_icon_64x64.ico")
-    with open(shortcut_path, "w", encoding="utf-8") as f:
-        f.write("[Desktop Entry]\n")
-        f.write("Type=Application\n")
-        f.write("Name=EPTA Launcher\n")
-        f.write(f"Exec={target_cmd}\n")
-        f.write(f"Path={os.path.dirname(sys.executable)}\n")
-        if os.path.exists(icon_path):
-            f.write(f"Icon={icon_path}\n")
-        f.write("Terminal=false\n")
-    os.chmod(shortcut_path, 0o755)
+    if os.name == "nt":
+        shortcut_path = os.path.join(desktop, "EPTA Launcher.lnk")
+        icon_path = resource_path("static/img/epta_icon_64x64.ico")
+        work_dir = os.path.dirname(sys.executable if getattr(sys, "frozen", False) else script)
+        create_windows_shortcut(shortcut_path, sys.executable, script if not getattr(sys, "frozen", False) else "", work_dir, icon_path)
+    else:
+        shortcut_path = os.path.join(desktop, "EPTA Launcher.desktop")
+        icon_path = os.path.abspath(resource_path("static/img/epta_icon_64x64.png"))
+        with open(shortcut_path, "w", encoding="utf-8") as f:
+            f.write("[Desktop Entry]\n")
+            f.write("Version=1.0\n")
+            f.write("Type=Application\n")
+            f.write("Name=EPTA Launcher\n")
+            f.write(f"Exec={target_cmd}\n")
+            f.write(f"Path={os.path.dirname(sys.executable)}\n")
+            if os.path.exists(icon_path):
+                f.write(f"Icon={icon_path}\n")
+            f.write("Terminal=false\n")
+        os.chmod(shortcut_path, 0o755)
 
     return shortcut_path
 
