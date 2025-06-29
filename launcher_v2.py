@@ -29,6 +29,8 @@ HTML_MAIN_PATH = resource_path(os.path.join("static", "html", "main_launcher.htm
 
 # GitHub repo for updates
 GITHUB_REPO = "samebr0dy/EPTAClient"
+LAUNCHER_VERSION = "1.3"
+LAUNCHER_REPO = "samebr0dy/LauncherEPTA"
 
 # Configuration paths
 if os.name == "nt":
@@ -133,6 +135,68 @@ def download_asset(asset_url: str, dest_path: str, progress_callback=None) -> bo
                         progress_callback("Скачивание", percent)
         if progress_callback:
             progress_callback("Скачивание", 100)
+        return True
+    return False
+
+
+def get_latest_launcher_release():
+    url = f"https://api.github.com/repos/{LAUNCHER_REPO}/releases/latest"
+    try:
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
+    return None
+
+
+def _run_launcher_updater(zip_url: str, latest_version: str, progress_callback=None):
+    exe_path = sys.executable
+    base_dir = os.path.dirname(exe_path)
+    zip_path = os.path.join(base_dir, f"launcher_update_{latest_version}.zip")
+    if not download_asset(zip_url, zip_path, progress_callback):
+        return False
+    script_path = os.path.join(base_dir, "_update_launcher.py")
+    script = f"""import os, sys, time, zipfile, subprocess
+zip_path = r'{zip_path}'
+exe_path = r'{exe_path}'
+script_path = os.path.abspath(__file__)
+for _ in range(30):
+    try:
+        os.remove(exe_path)
+        break
+    except PermissionError:
+        time.sleep(1)
+with zipfile.ZipFile(zip_path, 'r') as z:
+    z.extractall(os.path.dirname(exe_path))
+os.remove(zip_path)
+subprocess.Popen([exe_path])
+os.remove(script_path)
+"""
+    with open(script_path, "w", encoding="utf-8") as f:
+        f.write(script)
+    subprocess.Popen([sys.executable, script_path])
+    return True
+
+
+def check_for_launcher_update(progress_callback=None) -> bool:
+    """Check GitHub for a new launcher release and apply it."""
+    info = get_latest_launcher_release()
+    if not info:
+        return False
+    latest_version = info.get("tag_name") or info.get("name")
+    if latest_version == LAUNCHER_VERSION:
+        return False
+    asset_url = None
+    for asset in info.get("assets", []):
+        name = asset.get("name", "").lower()
+        if name.endswith(".zip"):
+            asset_url = asset.get("browser_download_url")
+            break
+    if not asset_url:
+        return False
+    if _run_launcher_updater(asset_url, latest_version, progress_callback):
+        print(f"Launcher updated to {latest_version}")
         return True
     return False
 
@@ -392,6 +456,8 @@ class WebApp(QtWidgets.QMainWindow):
 
 def main():
     load_config()
+    if check_for_launcher_update():
+        return
     app = QtWidgets.QApplication(sys.argv)
     window = WebApp()
     window.show()
