@@ -175,22 +175,23 @@ def _run_launcher_updater(zip_url: str, latest_version: str, progress_callback=N
     if not download_asset(zip_url, zip_path, progress_callback):
         return False
     script_path = os.path.join(base_dir, "_update_launcher.py")
-    script = f"""import os, sys, time, zipfile, subprocess
-zip_path = r'{zip_path}'
-exe_path = r'{exe_path}'
-script_path = os.path.abspath(__file__)
-for _ in range(30):
-    try:
-        os.remove(exe_path)
-        break
-    except PermissionError:
-        time.sleep(1)
-with zipfile.ZipFile(zip_path, 'r') as z:
-    z.extractall(os.path.dirname(exe_path))
-os.remove(zip_path)
-subprocess.Popen([exe_path])
-os.remove(script_path)
-"""
+    script = f"""
+        import os, sys, time, zipfile, subprocess
+        zip_path = r'{zip_path}'
+        exe_path = r'{exe_path}'
+        script_path = os.path.abspath(__file__)
+        for _ in range(30):
+            try:
+                os.remove(exe_path)
+                break
+            except PermissionError:
+                time.sleep(1)
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            z.extractall(os.path.dirname(exe_path))
+        os.remove(zip_path)
+        subprocess.Popen([exe_path])
+        os.remove(script_path)
+    """
     with open(script_path, "w", encoding="utf-8") as f:
         f.write(script)
     subprocess.Popen([sys.executable, script_path])
@@ -383,23 +384,18 @@ def create_desktop_shortcut() -> str:
         script = os.path.abspath(__file__)
         target_cmd = f'"{sys.executable}" "{script}"'
 
-    if os.name == "nt":
-        shortcut_path = os.path.join(desktop, "EPTA Launcher.bat")
-        with open(shortcut_path, "w", encoding="utf-8") as f:
-            f.write(f"@echo off\n{target_cmd}\n")
-    else:
-        shortcut_path = os.path.join(desktop, "EPTA Launcher.desktop")
-        icon_path = resource_path("static/img/epta_icon_64x64.ico")
-        with open(shortcut_path, "w", encoding="utf-8") as f:
-            f.write("[Desktop Entry]\n")
-            f.write("Type=Application\n")
-            f.write("Name=EPTA Launcher\n")
-            f.write(f"Exec={target_cmd}\n")
-            f.write(f"Path={os.path.dirname(sys.executable)}\n")
-            if os.path.exists(icon_path):
-                f.write(f"Icon={icon_path}\n")
-            f.write("Terminal=false\n")
-        os.chmod(shortcut_path, 0o755)
+    shortcut_path = os.path.join(desktop, "EPTA Launcher.desktop")
+    icon_path = resource_path("static/img/epta_icon_64x64.ico")
+    with open(shortcut_path, "w", encoding="utf-8") as f:
+        f.write("[Desktop Entry]\n")
+        f.write("Type=Application\n")
+        f.write("Name=EPTA Launcher\n")
+        f.write(f"Exec={target_cmd}\n")
+        f.write(f"Path={os.path.dirname(sys.executable)}\n")
+        if os.path.exists(icon_path):
+            f.write(f"Icon={icon_path}\n")
+        f.write("Terminal=false\n")
+    os.chmod(shortcut_path, 0o755)
 
     return shortcut_path
 
@@ -484,7 +480,7 @@ class Backend(QtCore.QObject):
 class WebApp(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("EPTA Launcher")
+        self.setWindowTitle(f"EPTA Launcher {LAUNCHER_VERSION}")
         ico_path = resource_path("static/img/epta_icon_64x64.ico")
         if os.path.exists(ico_path):
             # Qt stylesheets choke on backslashes; use forward slashes

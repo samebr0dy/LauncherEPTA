@@ -7,7 +7,7 @@
   },
   {
    "optionDest": "filenames",
-   "value": "H:/Git/LauncherEPTA/launcher.py"
+   "value": "H:/Git/LauncherEPTA/launcher_v2.py"
   },
   {
    "optionDest": "onefile",
@@ -15,11 +15,11 @@
   },
   {
    "optionDest": "console",
-   "value": true
+   "value": false
   },
   {
    "optionDest": "icon_file",
-   "value": "H:/Git/LauncherEPTA/epta_icon_64x64.ico"
+   "value": "H:/Git/LauncherEPTA/static/img/epta_icon_64x64.ico"
   },
   {
    "optionDest": "name",
@@ -63,11 +63,7 @@
   },
   {
    "optionDest": "datas",
-   "value": "H:/Git/LauncherEPTA/epta_icon_64x64.ico;."
-  },
-  {
-   "optionDest": "datas",
-   "value": "H:/Git/LauncherEPTA/background.png;."
+   "value": "H:/Git/LauncherEPTA/static;static/"
   }
  ],
  "nonPyinstallerOptions": {
