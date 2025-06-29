@@ -27,10 +27,13 @@ def resource_path(relative: str) -> str:
 # Path to HTML UI
 HTML_MAIN_PATH = resource_path(os.path.join("static", "html", "main_launcher.html"))
 
-# GitHub repo for updates
+# GitHub repo for updates (launcher itself)
 GITHUB_REPO = "samebr0dy/EPTAClient"
 LAUNCHER_VERSION = "1.3"
 LAUNCHER_REPO = "samebr0dy/LauncherEPTA"
+
+# Base URL for client updates
+BUCKET_URL = "https://storage.yandexcloud.net/eptaclient"
 
 # Configuration paths
 if os.name == "nt":
@@ -113,10 +116,14 @@ def save_config(game_dir: str, username: str, version: str | None, extra_args: s
 
 
 def get_latest_release_info():
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
-    response = requests.get(url, timeout=10)
-    if response.status_code == 200:
-        return response.json()
+    """Return metadata about the latest client release from BUCKET_URL."""
+    url = f"{BUCKET_URL}/last_version.json"
+    try:
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
     return None
 
 
@@ -137,6 +144,17 @@ def download_asset(asset_url: str, dest_path: str, progress_callback=None) -> bo
             progress_callback("Скачивание", 100)
         return True
     return False
+
+
+def get_json_safe(url: str):
+    """Fetch JSON data from url. Return None on error."""
+    try:
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
+    return None
 
 
 def get_latest_launcher_release():
@@ -202,64 +220,94 @@ def check_for_launcher_update(progress_callback=None) -> bool:
 
 
 def check_for_update(progress_callback=None):
-    """Check GitHub for a new release and install it if available."""
+    """Check the bucket for a new client release and install it."""
     global LAST_VERSION
+
     info = get_latest_release_info()
     if not info:
-        return False, "Ошибка в поиске последнего релиза"
+        return False, "Ошибка в поиске последней версии"
 
-    latest_version = info.get("tag_name") or info.get("name")
-    jar_path = os.path.join(GAME_DIR, "versions", "Forge-1.20.1", "Forge-1.20.1.jar")
-    if latest_version != LAST_VERSION or not os.path.exists(jar_path):
-        zip_url = info.get("zipball_url")
-        if not zip_url:
-            return False, "zipball_url not found"
+    latest_version = info.get("last")
+    unsupported = info.get("unsupported", [])
 
+    jar_path = os.path.join(
+        GAME_DIR, "versions", "Forge-1.20.1", "Forge-1.20.1.jar"
+    )
+
+    if LAST_VERSION is None or not os.path.exists(jar_path):
+        # Fresh install
+        base_url = f"{BUCKET_URL}/EPTAClient/eptaclientbase.zip"
         os.makedirs(GAME_DIR, exist_ok=True)
-        zip_path = os.path.join(GAME_DIR, f"{latest_version}.zip")
-        if progress_callback:
-            progress_callback("Скачивание", 0)
-        if download_asset(zip_url, zip_path, progress_callback):
-            try:
-                tmp_dir = tempfile.mkdtemp()
-                with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                    members = zip_ref.infolist()
-                    total_members = len(members) or 1
-                    for i, member in enumerate(members, 1):
-                        zip_ref.extract(member, tmp_dir)
-                        if progress_callback:
-                            percent = i * 100 / total_members
-                            progress_callback("Распаковка", percent)
-                root_items = os.listdir(tmp_dir)
-                if len(root_items) == 1 and os.path.isdir(os.path.join(tmp_dir, root_items[0])):
-                    src_root = os.path.join(tmp_dir, root_items[0])
-                else:
-                    src_root = tmp_dir
-                for item in os.listdir(src_root):
-                    src = os.path.join(src_root, item)
-                    dst = os.path.join(GAME_DIR, item)
-                    if os.path.isdir(src):
-                        if os.path.exists(dst):
-                            shutil.rmtree(dst)
-                        shutil.move(src, dst)
-                    else:
-                        if os.path.exists(dst):
-                            os.remove(dst)
-                        shutil.move(src, dst)
-                shutil.rmtree(tmp_dir)
-                if progress_callback:
-                    progress_callback("Установка", 100)
-            except zipfile.BadZipFile:
-                os.remove(zip_path)
-                return False, "Скачанный файл не валидный zip-архив"
+        zip_path = os.path.join(GAME_DIR, "eptaclientbase.zip")
+        if not download_asset(base_url, zip_path, progress_callback):
+            return False, "Ошибка при скачивании клиента"
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                members = zf.infolist()
+                total = len(members) or 1
+                for i, member in enumerate(members, 1):
+                    zf.extract(member, GAME_DIR)
+                    if progress_callback:
+                        progress_callback("Распаковка", i * 100 / total)
+        except zipfile.BadZipFile:
             os.remove(zip_path)
-            LAST_VERSION = latest_version
-            save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS, RAM_MB, AUTO_UPDATE)
-            if progress_callback:
-                progress_callback("Готово", 100)
-            return True, f"Обновлено до {latest_version}!"
-        return False, "Ошибка при скачивании обновления"
-    return False, "У Вас последняя версия!"
+            return False, "Скачанный файл не валидный zip-архив"
+        os.remove(zip_path)
+
+        mods_info = get_json_safe(f"{BUCKET_URL}/mods/mods.json")
+        if mods_info:
+            mods_dir = os.path.join(GAME_DIR, "mods")
+            os.makedirs(mods_dir, exist_ok=True)
+            for name in mods_info.get("add") or []:
+                download_asset(f"{BUCKET_URL}/mods/{name}", os.path.join(mods_dir, name), progress_callback)
+
+        cfg_info = get_json_safe(f"{BUCKET_URL}/config/configs.json")
+        if cfg_info:
+            cfg_dir = os.path.join(GAME_DIR, "config")
+            os.makedirs(cfg_dir, exist_ok=True)
+            for name in cfg_info.get("add") or []:
+                download_asset(f"{BUCKET_URL}/config/{name}", os.path.join(cfg_dir, name), progress_callback)
+
+        LAST_VERSION = latest_version
+        save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS, RAM_MB, AUTO_UPDATE)
+        if progress_callback:
+            progress_callback("Готово", 100)
+        return True, f"Установлено {latest_version}!"
+
+    if LAST_VERSION == latest_version:
+        return False, "У Вас последняя версия!"
+
+    if LAST_VERSION in unsupported:
+        return False, "Ваша версия не поддерживается, переустановите клиент"
+
+    # Partial update
+    mods_delta = get_json_safe(f"{BUCKET_URL}/{latest_version}/mods/{LAST_VERSION}.json")
+    if mods_delta:
+        mods_dir = os.path.join(GAME_DIR, "mods")
+        os.makedirs(mods_dir, exist_ok=True)
+        for name in mods_delta.get("del") or []:
+            path = os.path.join(mods_dir, name)
+            if os.path.exists(path):
+                os.remove(path)
+        for name in mods_delta.get("add") or []:
+            download_asset(f"{BUCKET_URL}/mods/{name}", os.path.join(mods_dir, name), progress_callback)
+
+    cfg_delta = get_json_safe(f"{BUCKET_URL}/{latest_version}/configs/{LAST_VERSION}.json")
+    if cfg_delta:
+        cfg_dir = os.path.join(GAME_DIR, "config")
+        os.makedirs(cfg_dir, exist_ok=True)
+        for name in cfg_delta.get("del") or []:
+            path = os.path.join(cfg_dir, name)
+            if os.path.exists(path):
+                os.remove(path)
+        for name in cfg_delta.get("add") or []:
+            download_asset(f"{BUCKET_URL}/config/{name}", os.path.join(cfg_dir, name), progress_callback)
+
+    LAST_VERSION = latest_version
+    save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS, RAM_MB, AUTO_UPDATE)
+    if progress_callback:
+        progress_callback("Готово", 100)
+    return True, f"Обновлено до {latest_version}!"
 
 
 game_process = None
