@@ -236,7 +236,7 @@ def check_for_update(progress_callback=None):
     )
 
     if LAST_VERSION is None or not os.path.exists(jar_path):
-        # Fresh install
+        # Full install
         base_url = f"{BUCKET_URL}/EPTAClient/eptaclientbase.zip"
         os.makedirs(GAME_DIR, exist_ok=True)
         zip_path = os.path.join(GAME_DIR, "eptaclientbase.zip")
@@ -268,6 +268,13 @@ def check_for_update(progress_callback=None):
             os.makedirs(cfg_dir, exist_ok=True)
             for name in cfg_info.get("add") or []:
                 download_asset(f"{BUCKET_URL}/config/{name}", os.path.join(cfg_dir, name), progress_callback)
+
+        kubejs_info = get_json_safe(f"{BUCKET_URL}/kubejs/kubejs.json")
+        if kubejs_info:
+            kubejs_dir = os.path.join(GAME_DIR, "kubejs")
+            os.makedirs(kubejs_dir, exist_ok=True)
+            for name in kubejs_info.get("add") or []:
+                download_asset(f"{BUCKET_URL}/kubejs/{name}", os.path.join(kubejs_dir, name), progress_callback)
 
         LAST_VERSION = latest_version
         save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS, RAM_MB, AUTO_UPDATE)
@@ -304,6 +311,17 @@ def check_for_update(progress_callback=None):
         for name in cfg_delta.get("add") or []:
             download_asset(f"{BUCKET_URL}/config/{name}", os.path.join(cfg_dir, name), progress_callback)
 
+    kubejs_delta = get_json_safe(f"{BUCKET_URL}/{latest_version}/kubejs/{LAST_VERSION}.json")
+    if kubejs_delta:
+        kubejs_dir = os.path.join(GAME_DIR, "kubejs")
+        os.makedirs(kubejs_dir, exist_ok=True)
+        for name in kubejs_delta.get("del") or []:
+            path = os.path.join(kubejs_dir, name)
+            if os.path.exists(path):
+                os.remove(path)
+        for name in kubejs_delta.get("add") or []:
+            download_asset(f"{BUCKET_URL}/kubejs/{name}", os.path.join(kubejs_dir, name), progress_callback)
+
     LAST_VERSION = latest_version
     save_config(GAME_DIR, USERNAME, LAST_VERSION, EXTRA_ARGS, RAM_MB, AUTO_UPDATE)
     if progress_callback:
@@ -313,6 +331,7 @@ def check_for_update(progress_callback=None):
 
 game_process = None
 console_window = None
+
 
 def start_game(show_console: bool):
     """Launch the game using DEFAULT_CMD_TEMPLATE and EXTRA_ARGS."""
